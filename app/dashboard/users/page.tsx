@@ -1,11 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAppContext, Role, User } from "../../context/AppContext";
 
 export default function UsersPage() {
   const { currentUser, users, updateUserRole, deleteUser, fetchData, isFetchingData, setViewingGlobalAvatarUrl } = useAppContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (openDropdownId && triggerRefs.current[openDropdownId]) {
+      const rect = triggerRefs.current[openDropdownId]!.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width
+      });
+    }
+  }, [openDropdownId]);
 
   if (!currentUser || currentUser.role !== "Admin") {
     return (
@@ -37,9 +52,10 @@ export default function UsersPage() {
     const isSuperAdmin = currentUser.username === 'liam';
     const isOtherAdmin = u.role === "Admin" && !isSelf;
     const canEdit = !isSelf && (!isOtherAdmin || isSuperAdmin);
+    const isDropdownOpen = openDropdownId === u.id;
 
     return (
-      <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)' }}>
+      <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)', position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div 
             onClick={() => {
@@ -73,17 +89,96 @@ export default function UsersPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {canEdit ? (
-            <select 
-              value={u.role}
-              onChange={(e) => updateUserRole(u.id, e.target.value as Role)}
-              style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.85rem' }}
-            >
-              <option value="Admin">Admin</option>
-              <option value="User">User</option>
-              <option value="Guest">Guest</option>
-            </select>
+            <div style={{ position: 'relative' }}>
+              <button 
+                ref={el => { triggerRefs.current[u.id] = el; }}
+                onClick={() => setOpenDropdownId(isDropdownOpen ? null : u.id)}
+                style={{
+                  padding: '0.35rem 0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: isDropdownOpen ? 'rgba(99, 102, 241, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                  color: 'var(--text-color)',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s',
+                  minWidth: '85px',
+                  justifyContent: 'space-between'
+                }}
+              >
+                {u.role}
+                <span style={{ fontSize: '0.6rem', opacity: 0.5, transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'all 0.2s' }}>▼</span>
+              </button>
+
+              {isDropdownOpen && createPortal(
+                <>
+                  <div 
+                    onClick={() => setOpenDropdownId(null)}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10000 }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: dropdownPos.top + 5,
+                    left: dropdownPos.left + dropdownPos.width - 100, // Align right with button
+                    backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                    padding: '0.3rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '2px',
+                    zIndex: 10001,
+                    minWidth: '100px',
+                    animation: 'dropdownScale 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                  }}>
+                    <style>{`
+                      @keyframes dropdownScale {
+                        from { opacity: 0; transform: scale(0.95) translateY(-5px); }
+                        to { opacity: 1; transform: scale(1) translateY(0); }
+                      }
+                      .role-item {
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 0.8rem;
+                        font-weight: 500;
+                        color: rgba(255, 255, 255, 0.7);
+                        transition: all 0.2s;
+                      }
+                      .role-item:hover {
+                        background: rgba(99, 102, 241, 0.15);
+                        color: #fff;
+                      }
+                      .role-item.active {
+                        background: var(--primary-color);
+                        color: #fff;
+                      }
+                    `}</style>
+                    {(['Admin', 'User', 'Guest'] as Role[]).map(role => (
+                      <div 
+                        key={role}
+                        className={`role-item ${u.role === role ? 'active' : ''}`}
+                        onClick={() => {
+                          updateUserRole(u.id, role);
+                          setOpenDropdownId(null);
+                        }}
+                      >
+                        {role}
+                      </div>
+                    ))}
+                  </div>
+                </>,
+                document.body
+              )}
+            </div>
           ) : (
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-muted)', padding: '0.35rem 0.75rem' }}>
               {u.role}
             </span>
           )}
@@ -94,7 +189,9 @@ export default function UsersPage() {
                   deleteUser(u.id);
                 }
               }}
-              style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '0 0.25rem' }}
+              style={{ background: 'none', border: 'none', color: 'var(--danger-color)', cursor: 'pointer', padding: '0 0.5rem', fontSize: '1.1rem', opacity: 0.6 }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
               title="Delete User"
             >
               ✕

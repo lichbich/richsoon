@@ -268,25 +268,69 @@ export default function DashboardLayout({
               bottom: '100%',
               left: 0,
               right: 0,
-              marginBottom: '0.5rem',
-              backgroundColor: 'var(--surface-color)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 'var(--radius-md)',
-              boxShadow: 'var(--shadow-lg)',
-              padding: '0.5rem',
+              marginBottom: '0.75rem',
+              backgroundColor: 'rgba(30, 41, 59, 0.8)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '16px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              padding: '0.6rem',
               zIndex: 50,
               display: 'flex',
               flexDirection: 'column',
-              gap: '0.25rem'
+              gap: '0.4rem',
+              animation: 'profilePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
             }}>
-              <button onClick={() => openEditModal('avatar')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
-                🖼️ Change Avatar
+              <style>{`
+                @keyframes profilePop {
+                  from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                  to { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                .menu-btn {
+                  display: flex;
+                  align-items: center;
+                  width: 100%;
+                  padding: 10px 12px;
+                  background: transparent;
+                  border: none;
+                  border-radius: 10px;
+                  color: rgba(255, 255, 255, 0.8);
+                  font-size: 0.85rem;
+                  font-weight: 500;
+                  cursor: pointer;
+                  transition: all 0.2s ease;
+                  text-align: left;
+                }
+                .menu-btn:hover {
+                  background: rgba(99, 102, 241, 0.15);
+                  color: #fff;
+                  transform: translateX(4px);
+                }
+                .menu-icon {
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 28px;
+                  height: 28px;
+                  margin-right: 12px;
+                  font-size: 1.1rem;
+                  opacity: 0.9;
+                }
+              `}</style>
+              
+              <button onClick={() => openEditModal('avatar')} className="menu-btn">
+                <span className="menu-icon">🖼️</span>
+                <span>Change Avatar</span>
               </button>
-              <button onClick={() => openEditModal('username')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
-                📝 Change Username
+              
+              <button onClick={() => openEditModal('username')} className="menu-btn">
+                <span className="menu-icon">👤</span>
+                <span>Change Username</span>
               </button>
-              <button onClick={() => openEditModal('password')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
-                🔑 Change Password
+              
+              <button onClick={() => openEditModal('password')} className="menu-btn">
+                <span className="menu-icon">🔐</span>
+                <span>Change Password</span>
               </button>
             </div>
           )}
@@ -303,13 +347,25 @@ export default function DashboardLayout({
             fontWeight: 500,
             textAlign: 'left',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            marginBottom: '1rem'
           }}
           onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'}
           onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'}
         >
           🚪 Sign Out
         </button>
+
+        <div style={{ 
+          fontSize: '0.65rem', 
+          color: 'var(--text-muted)', 
+          textAlign: 'center',
+          opacity: 0.6,
+          lineHeight: 1.5,
+          padding: '0 0.5rem'
+        }}>
+          © Copyright by Liam - owned by <br/> Telegram: @caramencafe
+        </div>
       </aside>
 
       {/* Main Content */}

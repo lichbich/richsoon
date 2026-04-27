@@ -12,6 +12,7 @@ export default function BooksPage() {
   const [link, setLink] = useState("");
   const [price, setPrice] = useState("");
   const [selectedAuthor, setSelectedAuthor] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [savingAssignments, setSavingAssignments] = useState<Set<string>>(new Set());
 
   if (!currentUser || currentUser.role !== "Admin") {
@@ -110,17 +111,101 @@ export default function BooksPage() {
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Add new books and assign them to users</p>
         </div>
 
-        <div>
-          <label style={{ marginRight: '0.5rem', fontWeight: 500 }}>Filter by Author:</label>
-          <select 
-            value={selectedAuthor} 
-            onChange={(e) => setSelectedAuthor(e.target.value)}
-            style={{ width: 'auto', display: 'inline-block', minWidth: '150px' }}
-          >
-            {uniqueAuthors.map(auth => (
-              <option key={auth} value={auth}>{auth}</option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative', zIndex: 10 }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Filter by Author:</span>
+          
+          <div style={{ position: 'relative', minWidth: '180px' }}>
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="glass"
+              style={{ 
+                width: '100%',
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                padding: '0.6rem 1rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
+              <span>{selectedAuthor}</span>
+              <span style={{ 
+                fontSize: '0.7rem', 
+                transition: 'transform 0.2s ease',
+                transform: isFilterOpen ? 'rotate(180deg)' : 'rotate(0)'
+              }}>▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div 
+                  onClick={() => setIsFilterOpen(false)}
+                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                  padding: '0.4rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  animation: 'dropdownIn 0.2s ease-out',
+                  zIndex: 100,
+                }}>
+                  <style>{`
+                    @keyframes dropdownIn {
+                      from { opacity: 0; transform: translateY(-10px); }
+                      to { opacity: 1; transform: translateY(0); }
+                    }
+                    .dropdown-item {
+                      padding: 10px 14px;
+                      border-radius: 8px;
+                      cursor: pointer;
+                      font-size: 0.85rem;
+                      font-weight: 500;
+                      color: rgba(255, 255, 255, 0.7);
+                      transition: all 0.2s;
+                    }
+                    .dropdown-item:hover {
+                      background: rgba(99, 102, 241, 0.15);
+                      color: #fff;
+                    }
+                    .dropdown-item.active {
+                      background: var(--primary-color);
+                      color: #fff;
+                    }
+                  `}</style>
+                  {uniqueAuthors.map(auth => (
+                    <div 
+                      key={auth}
+                      className={`dropdown-item ${selectedAuthor === auth ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedAuthor(auth);
+                        setIsFilterOpen(false);
+                      }}
+                    >
+                      {auth}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

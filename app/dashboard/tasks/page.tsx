@@ -27,6 +27,22 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
     }
   };
 
+  const handleIncrement = () => {
+    const current = parseInt(localValue) || 0;
+    setLocalValue(String(current + 1));
+    setIsDirty(true);
+    setShowSuccess(false);
+  };
+
+  const handleDecrement = () => {
+    const current = parseInt(localValue) || 0;
+    if (current > 0) {
+      setLocalValue(String(current - 1));
+      setIsDirty(true);
+      setShowSuccess(false);
+    }
+  };
+
   const handleSave = useCallback(async () => {
     if (!isDirty) return;
     const numValue = parseInt(localValue) || 0;
@@ -46,6 +62,14 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
       e.preventDefault();
       handleSave();
     }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      handleIncrement();
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      handleDecrement();
+    }
   };
 
   return (
@@ -53,9 +77,46 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center', 
-      gap: '6px',
+      gap: '8px',
       position: 'relative'
     }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <button 
+          onClick={handleIncrement}
+          style={{
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: 'none',
+            borderRadius: '4px',
+            color: 'var(--primary-color)',
+            cursor: 'pointer',
+            padding: '2px 6px',
+            fontSize: '0.75rem',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
+        >
+          ▲
+        </button>
+        <button 
+          onClick={handleDecrement}
+          style={{
+            background: 'rgba(99, 102, 241, 0.1)',
+            border: 'none',
+            borderRadius: '4px',
+            color: 'var(--primary-color)',
+            cursor: 'pointer',
+            padding: '2px 6px',
+            fontSize: '0.75rem',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
+        >
+          ▼
+        </button>
+      </div>
+      
       <input
         type="text"
         inputMode="numeric"
@@ -65,11 +126,11 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
         onKeyDown={handleKeyDown}
         placeholder="0"
         style={{ 
-          width: '80px', 
-          padding: '0.5rem 0.6rem', 
+          width: '70px', 
+          padding: '0.5rem 0.4rem', 
           textAlign: 'center',
-          fontSize: '1rem',
-          fontWeight: 500,
+          fontSize: '1.1rem',
+          fontWeight: 600,
           borderRadius: '8px',
           border: isDirty 
             ? '2px solid var(--primary-color)' 
@@ -83,34 +144,52 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
           color: 'var(--text-color)',
         }}
       />
+
       <button
         onClick={handleSave}
         disabled={!isDirty || isSaving}
-        title={isDirty ? "Save (Enter)" : "No changes"}
         style={{
-          width: '32px',
-          height: '32px',
+          padding: '0.5rem 1rem',
           borderRadius: '8px',
           border: 'none',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '1rem',
+          fontSize: '0.85rem',
+          fontWeight: 600,
           cursor: isDirty ? 'pointer' : 'default',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           backgroundColor: showSuccess 
-            ? 'var(--success-color)' 
+            ? 'rgba(34, 197, 94, 0.1)' 
             : isDirty 
               ? 'var(--primary-color)' 
-              : 'rgba(100, 116, 139, 0.15)',
-          color: (isDirty || showSuccess) ? 'white' : 'var(--text-muted)',
-          opacity: (!isDirty && !showSuccess) ? 0.5 : 1,
-          transform: isDirty ? 'scale(1)' : 'scale(0.9)',
-          boxShadow: isDirty ? '0 2px 8px rgba(99, 102, 241, 0.3)' : 'none',
-          flexShrink: 0,
+              : 'rgba(99, 102, 241, 0.05)',
+          color: showSuccess 
+            ? 'var(--success-color)' 
+            : isDirty 
+              ? 'white' 
+              : 'rgba(99, 102, 241, 0.4)',
+          minWidth: '60px',
+          height: '38px',
+          boxShadow: isDirty && !showSuccess ? '0 4px 12px rgba(99, 102, 241, 0.25)' : 'none',
+          opacity: isSaving ? 0.8 : 1,
+          transform: isDirty && !isSaving ? 'scale(1)' : 'scale(0.98)',
         }}
       >
-        {isSaving ? '⏳' : showSuccess ? '✓' : '💾'}
+        {isSaving ? (
+          <span className="spinner" style={{ 
+            width: '16px', 
+            height: '16px', 
+            borderWidth: '2px',
+            borderTopColor: isDirty ? 'white' : 'var(--primary-color)' 
+          }} />
+        ) : showSuccess ? (
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '1rem' }}>✓</span> Done
+          </span>
+        ) : (
+          'Save'
+        )}
       </button>
     </div>
   );
@@ -120,6 +199,7 @@ export default function TasksPage() {
   const { currentUser, books, users, taskCounts, updateTaskCount, isFetchingData } = useAppContext();
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState("All");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   if (!currentUser) return null;
 
@@ -204,17 +284,100 @@ export default function TasksPage() {
           <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage book links and completion counts</p>
         </div>
         
-        <div>
-          <label style={{ marginRight: '0.5rem', fontWeight: 500 }}>Filter by Author:</label>
-          <select 
-            value={selectedAuthor} 
-            onChange={(e) => setSelectedAuthor(e.target.value)}
-            style={{ width: 'auto', display: 'inline-block', minWidth: '150px' }}
-          >
-            {uniqueAuthors.map(author => (
-              <option key={author} value={author}>{author}</option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative', zIndex: 10 }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Filter by Author:</span>
+          
+          <div style={{ position: 'relative', minWidth: '180px' }}>
+            <button 
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="glass"
+              style={{ 
+                width: '100%',
+                backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '12px',
+                padding: '0.6rem 1rem',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+              onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+            >
+              <span>{selectedAuthor}</span>
+              <span style={{ 
+                fontSize: '0.7rem', 
+                transition: 'transform 0.2s ease',
+                transform: isFilterOpen ? 'rotate(180deg)' : 'rotate(0)'
+              }}>▼</span>
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div 
+                  onClick={() => setIsFilterOpen(false)}
+                  style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: -1 }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: 'rgba(30, 41, 59, 0.95)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '14px',
+                  boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                  padding: '0.4rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '2px',
+                  animation: 'dropdownIn 0.2s ease-out'
+                }}>
+                  <style>{`
+                    @keyframes dropdownIn {
+                      from { opacity: 0; transform: translateY(-10px); }
+                      to { opacity: 1; transform: translateY(0); }
+                    }
+                    .dropdown-item {
+                      padding: 10px 14px;
+                      border-radius: 8px;
+                      cursor: pointer;
+                      font-size: 0.85rem;
+                      font-weight: 500;
+                      color: rgba(255, 255, 255, 0.7);
+                      transition: all 0.2s;
+                    }
+                    .dropdown-item:hover {
+                      background: rgba(99, 102, 241, 0.15);
+                      color: #fff;
+                    }
+                    .dropdown-item.active {
+                      background: var(--primary-color);
+                      color: #fff;
+                    }
+                  `}</style>
+                  {uniqueAuthors.map(author => (
+                    <div 
+                      key={author}
+                      className={`dropdown-item ${selectedAuthor === author ? 'active' : ''}`}
+                      onClick={() => {
+                        setSelectedAuthor(author);
+                        setIsFilterOpen(false);
+                      }}
+                    >
+                      {author}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
