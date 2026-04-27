@@ -41,6 +41,8 @@ interface AppState {
   deleteBook: (bookId: string) => void;
   updateBookAssignments: (bookId: string, assignedUsers: string[]) => Promise<void>;
   updateProfile: (userId: string, data: { username?: string, password?: string, avatarUrl?: string }) => Promise<boolean>;
+  viewingGlobalAvatarUrl: string | null;
+  setViewingGlobalAvatarUrl: (url: string | null) => void;
   fetchData: () => Promise<void>;
 }
 
@@ -57,6 +59,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [taskCounts, setTaskCounts] = useState<TaskCounts>({});
+  const [viewingGlobalAvatarUrl, setViewingGlobalAvatarUrl] = useState<string | null>(null);
 
   // Restore session from localStorage on mount
   useEffect(() => {
@@ -295,10 +298,44 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteBook,
         updateBookAssignments,
         updateProfile,
+        viewingGlobalAvatarUrl,
+        setViewingGlobalAvatarUrl,
         fetchData,
       }}
     >
       {children}
+      
+      {/* Global Fullscreen Avatar Viewer */}
+      {viewingGlobalAvatarUrl && (
+        <div 
+          onClick={() => setViewingGlobalAvatarUrl(null)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '2rem',
+            cursor: 'zoom-out'
+          }}
+        >
+          <img 
+            src={viewingGlobalAvatarUrl} 
+            alt="Avatar Fullscreen" 
+            style={{ 
+              width: '90vw',
+              height: '90vh',
+              objectFit: 'contain', 
+              borderRadius: '8px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+              animation: 'fadeIn 0.2s ease-out'
+            }} 
+          />
+        </div>
+      )}
     </AppContext.Provider>
   );
 };

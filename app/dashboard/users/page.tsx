@@ -4,9 +4,8 @@ import { useState } from "react";
 import { useAppContext, Role, User } from "../../context/AppContext";
 
 export default function UsersPage() {
-  const { currentUser, users, updateUserRole, deleteUser, fetchData, isFetchingData } = useAppContext();
+  const { currentUser, users, updateUserRole, deleteUser, fetchData, isFetchingData, setViewingGlobalAvatarUrl } = useAppContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [viewingAvatarUrl, setViewingAvatarUrl] = useState<string | null>(null);
 
   if (!currentUser || currentUser.role !== "Admin") {
     return (
@@ -45,7 +44,7 @@ export default function UsersPage() {
           <div 
             onClick={() => {
               if (u.avatarUrl) {
-                setViewingAvatarUrl(u.avatarUrl);
+                setViewingGlobalAvatarUrl(u.avatarUrl);
               }
             }}
             style={{ 
@@ -184,38 +183,6 @@ export default function UsersPage() {
         {renderColumn("Verified Users", verifiedUsers, "var(--info-color, #3b82f6)", 3)}
         {renderColumn("Guests / Pending", guests, "var(--warning-color, #f97316)", 2)}
       </div>
-
-      {/* Fullscreen Avatar Viewer */}
-      {viewingAvatarUrl && (
-        <div 
-          onClick={() => setViewingAvatarUrl(null)}
-          className="animate-fade-in"
-          style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '2rem',
-            cursor: 'zoom-out'
-          }}
-        >
-          <img 
-            src={viewingAvatarUrl} 
-            alt="Avatar Fullscreen" 
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: '100%', 
-              objectFit: 'contain', 
-              borderRadius: '8px',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.5)'
-            }} 
-          />
-        </div>
-      )}
     </div>
   );
 }
