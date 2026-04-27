@@ -1,0 +1,204 @@
+"use client";
+
+import { useState } from "react";
+import { useAppContext } from "../../context/AppContext";
+
+export default function BooksPage() {
+  const { currentUser, books, users, addBook, editBook, deleteBook, updateBookAssignments } = useAppContext();
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [link, setLink] = useState("");
+  const [price, setPrice] = useState("");
+  const [selectedAuthor, setSelectedAuthor] = useState("All");
+
+  if (!currentUser || currentUser.role !== "Admin") {
+    return (
+      <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
+        <h2 style={{ color: 'var(--danger-color)', marginBottom: '1rem' }}>Access Denied</h2>
+        <p style={{ color: 'var(--text-muted)' }}>
+          You need Admin privileges to view this page.
+        </p>
+      </div>
+    );
+  }
+
+  const activeUsers = users.filter(u => u.role !== "Guest");
+
+  const startEdit = (book: any) => {
+    setEditingId(book.id);
+    setTitle(book.title);
+    setAuthor(book.author || "");
+    setLink(book.link);
+    setPrice(book.price.toString());
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setTitle("");
+    setAuthor("");
+    setLink("");
+    setPrice("");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (title && author && link && price) {
+      if (editingId) {
+        editBook(editingId, title, author, link, parseFloat(price));
+        cancelEdit();
+      } else {
+        addBook(title, author, link, parseFloat(price), []);
+        setTitle("");
+        setAuthor("");
+        setLink("");
+        setPrice("");
+      }
+    }
+  };
+
+  const toggleAssignment = (bookId: string, userId: string, currentAssignments: string[]) => {
+    if (currentAssignments.includes(userId)) {
+      updateBookAssignments(bookId, currentAssignments.filter(id => id !== userId));
+    } else {
+      updateBookAssignments(bookId, [...currentAssignments, userId]);
+    }
+  };
+
+  const uniqueAuthors = ["All", ...Array.from(new Set(books.map(b => b.author).filter(Boolean)))];
+  const filteredBooks = selectedAuthor === "All" ? books : books.filter(b => b.author === selectedAuthor);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1 style={{ margin: 0, color: 'var(--text-color)' }}>Book Management</h1>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Add new books and assign them to users</p>
+        </div>
+
+        <div>
+          <label style={{ marginRight: '0.5rem', fontWeight: 500 }}>Filter by Author:</label>
+          <select 
+            value={selectedAuthor} 
+            onChange={(e) => setSelectedAuthor(e.target.value)}
+            style={{ width: 'auto', display: 'inline-block', minWidth: '150px' }}
+          >
+            {uniqueAuthors.map(auth => (
+              <option key={auth} value={auth}>{auth}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>
+          {editingId ? "Edit Book" : "Add New Book"}
+        </h3>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Title</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="Book Title" />
+          </div>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Author</label>
+            <input type="text" value={author} onChange={(e) => setAuthor(e.target.value)} required placeholder="Author Name" />
+          </div>
+          <div style={{ flex: 1, minWidth: '150px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Link</label>
+            <input type="url" value={link} onChange={(e) => setLink(e.target.value)} required placeholder="https://..." />
+          </div>
+          <div style={{ width: '100px' }}>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem' }}>Price ($)</label>
+            <input type="number" step="0.01" min="0" value={price} onChange={(e) => setPrice(e.target.value)} required placeholder="0.00" />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
+              {editingId ? "Save" : "Add Book"}
+            </button>
+            {editingId && (
+              <button type="button" onClick={cancelEdit} className="btn" style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-color)' }}>
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
+
+      <div className="card" style={{ padding: '0', overflowX: 'auto' }}>
+        <table style={{ width: '100%', minWidth: '800px' }}>
+          <thead>
+            <tr>
+              <th style={{ width: '20%' }}>Book Title</th>
+              <th style={{ width: '15%' }}>Author</th>
+              <th style={{ width: '10%', textAlign: 'right' }}>Price</th>
+              <th style={{ width: '40%' }}>Assigned Users</th>
+              <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredBooks.map(book => (
+              <tr key={book.id}>
+                <td style={{ fontWeight: 500 }}>{book.title}</td>
+                <td style={{ color: 'var(--text-muted)' }}>{book.author}</td>
+                <td style={{ textAlign: 'right' }}>${book.price.toFixed(2)}</td>
+                <td>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    {activeUsers.map(user => {
+                      const isAssigned = book.assignedUsers?.includes(user.id);
+                      return (
+                        <label key={user.id} style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.5rem',
+                          cursor: 'pointer',
+                          padding: '0.25rem 0.5rem',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: isAssigned ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                          border: `1px solid ${isAssigned ? 'var(--primary-color)' : 'var(--border-color)'}`
+                        }}>
+                          <input 
+                            type="checkbox" 
+                            checked={isAssigned}
+                            onChange={() => toggleAssignment(book.id, user.id, book.assignedUsers || [])}
+                            style={{ width: 'auto', margin: 0 }}
+                          />
+                          <span style={{ 
+                            fontSize: '0.875rem',
+                            color: isAssigned ? 'var(--primary-color)' : 'var(--text-color)'
+                          }}>
+                            {user.username}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button 
+                    onClick={() => startEdit(book)}
+                    className="btn" 
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.875rem', marginRight: '0.5rem', backgroundColor: 'rgba(99, 102, 241, 0.1)', color: 'var(--primary-color)' }}
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete "${book.title}"?`)) {
+                        deleteBook(book.id);
+                      }
+                    }}
+                    className="btn btn-danger" 
+                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.875rem' }}
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
