@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAppContext } from "../../context/AppContext";
 
 export default function BooksPage() {
-  const { currentUser, books, users, addBook, editBook, deleteBook, updateBookAssignments } = useAppContext();
+  const { currentUser, books, users, addBook, editBook, deleteBook, updateBookAssignments, isFetchingData } = useAppContext();
   
   const [editingId, setEditingId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -12,6 +12,7 @@ export default function BooksPage() {
   const [link, setLink] = useState("");
   const [price, setPrice] = useState("");
   const [selectedAuthor, setSelectedAuthor] = useState("All");
+  const [savingAssignments, setSavingAssignments] = useState<Set<string>>(new Set());
 
   if (!currentUser || currentUser.role !== "Admin") {
     return (
@@ -58,16 +59,48 @@ export default function BooksPage() {
     }
   };
 
-  const toggleAssignment = (bookId: string, userId: string, currentAssignments: string[]) => {
-    if (currentAssignments.includes(userId)) {
-      updateBookAssignments(bookId, currentAssignments.filter(id => id !== userId));
-    } else {
-      updateBookAssignments(bookId, [...currentAssignments, userId]);
+  const toggleAssignment = async (bookId: string, userId: string, currentAssignments: string[]) => {
+    const key = `${bookId}:${userId}`;
+    setSavingAssignments(prev => new Set(prev).add(key));
+    try {
+      if (currentAssignments.includes(userId)) {
+        await updateBookAssignments(bookId, currentAssignments.filter(id => id !== userId));
+      } else {
+        await updateBookAssignments(bookId, [...currentAssignments, userId]);
+      }
+    } finally {
+      setSavingAssignments(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
     }
   };
 
   const uniqueAuthors = ["All", ...Array.from(new Set(books.map(b => b.author).filter(Boolean)))];
   const filteredBooks = selectedAuthor === "All" ? books : books.filter(b => b.author === selectedAuthor);
+
+  const renderSkeletonRows = () => (
+    Array.from({ length: 3 }).map((_, i) => (
+      <tr key={`skeleton-${i}`}>
+        <td><div className="skeleton skeleton-cell" style={{ width: '75%' }} /></td>
+        <td><div className="skeleton skeleton-cell" style={{ width: '60%' }} /></td>
+        <td><div className="skeleton skeleton-cell" style={{ width: '40px', marginLeft: 'auto' }} /></td>
+        <td>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: 'var(--radius-md)' }} />
+            <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: 'var(--radius-md)' }} />
+          </div>
+        </td>
+        <td style={{ textAlign: 'right' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <div className="skeleton" style={{ width: '50px', height: '30px', borderRadius: 'var(--radius-md)' }} />
+            <div className="skeleton" style={{ width: '60px', height: '30px', borderRadius: 'var(--radius-md)' }} />
+          </div>
+        </td>
+      </tr>
+    ))
+  );
 
   return (
     <div>
@@ -137,32 +170,43 @@ export default function BooksPage() {
             </tr>
           </thead>
           <tbody>
-            {filteredBooks.map(book => (
+            {isFetchingData && filteredBooks.length === 0 ? (
+              renderSkeletonRows()
+            ) : (
+              filteredBooks.map(book => (
               <tr key={book.id}>
                 <td style={{ fontWeight: 500 }}>{book.title}</td>
                 <td style={{ color: 'var(--text-muted)' }}>{book.author}</td>
                 <td style={{ textAlign: 'right' }}>${book.price.toFixed(2)}</td>
                 <td>
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     {activeUsers.map(user => {
                       const isAssigned = book.assignedUsers?.includes(user.id);
+                      const isSaving = savingAssignments.has(`${book.id}:${user.id}`);
                       return (
                         <label key={user.id} style={{ 
                           display: 'flex', 
                           alignItems: 'center', 
-                          gap: '0.5rem',
-                          cursor: 'pointer',
-                          padding: '0.25rem 0.5rem',
+                          gap: '0.4rem',
+                          cursor: isSaving ? 'wait' : 'pointer',
+                          padding: '0.3rem 0.6rem',
                           borderRadius: 'var(--radius-md)',
                           backgroundColor: isAssigned ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          border: `1px solid ${isAssigned ? 'var(--primary-color)' : 'var(--border-color)'}`
+                          border: `1px solid ${isAssigned ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                          opacity: isSaving ? 0.6 : 1,
+                          transition: 'all 0.2s ease',
+                          position: 'relative',
                         }}>
-                          <input 
-                            type="checkbox" 
-                            checked={isAssigned}
-                            onChange={() => toggleAssignment(book.id, user.id, book.assignedUsers || [])}
-                            style={{ width: 'auto', margin: 0 }}
-                          />
+                          {isSaving ? (
+                            <span className="spinner spinner-dark" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
+                          ) : (
+                            <input 
+                              type="checkbox" 
+                              checked={isAssigned}
+                              onChange={() => toggleAssignment(book.id, user.id, book.assignedUsers || [])}
+                              style={{ width: 'auto', margin: 0 }}
+                            />
+                          )}
                           <span style={{ 
                             fontSize: '0.875rem',
                             color: isAssigned ? 'var(--primary-color)' : 'var(--text-color)'
@@ -195,7 +239,8 @@ export default function BooksPage() {
                   </button>
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
         </table>
       </div>

@@ -9,6 +9,7 @@ export interface User {
   username: string;
   role: Role;
   last_active?: number;
+  avatarUrl?: string;
 }
 
 export interface Book {
@@ -25,6 +26,7 @@ type TaskCounts = Record<string, Record<string, number>>;
 interface AppState {
   currentUser: User | null;
   isLoading: boolean;
+  isFetchingData: boolean;
   users: User[];
   books: Book[];
   taskCounts: TaskCounts;
@@ -37,7 +39,8 @@ interface AppState {
   addBook: (title: string, author: string, link: string, price: number, assignedUsers: string[]) => void;
   editBook: (bookId: string, title: string, author: string, link: string, price: number) => void;
   deleteBook: (bookId: string) => void;
-  updateBookAssignments: (bookId: string, assignedUsers: string[]) => void;
+  updateBookAssignments: (bookId: string, assignedUsers: string[]) => Promise<void>;
+  updateProfile: (userId: string, data: { username?: string, password?: string, avatarUrl?: string }) => Promise<boolean>;
   fetchData: () => Promise<void>;
 }
 
@@ -50,6 +53,7 @@ const SESSION_KEY = 'richsoon_session';
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [taskCounts, setTaskCounts] = useState<TaskCounts>({});
@@ -70,6 +74,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const fetchData = async () => {
+    setIsFetchingData(true);
     try {
       const [usersRes, booksRes, tasksRes] = await Promise.all([
         fetch(`${API_URL}/users`).catch(() => null),
@@ -82,6 +87,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (tasksRes?.ok) setTaskCounts(await tasksRes.json() || {});
     } catch (err) {
       console.error("Error fetching data:", err);
+    } finally {
+      setIsFetchingData(false);
     }
   };
 
@@ -242,10 +249,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {}
   };
 
+  const updateProfile = async (userId: string, data: { username?: string, password?: string, avatarUrl?: string }): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_URL}/users/${userId}/profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json();
+      if (res.ok && resData.success) {
+        if (currentUser?.id === userId) {
+          setCurrentUser(resData.user);
+          localStorage.setItem(SESSION_KEY, JSON.stringify(resData.user));
+        }
+        fetchData();
+        return true;
+      } else {
+        alert(resData.error || "Failed to update profile");
+        return false;
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating profile");
+      return false;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
         isLoading,
+        isFetchingData,
         currentUser,
         users,
         books,
@@ -260,6 +294,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         editBook,
         deleteBook,
         updateBookAssignments,
+        updateProfile,
         fetchData,
       }}
     >

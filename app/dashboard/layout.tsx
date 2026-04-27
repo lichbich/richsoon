@@ -35,9 +35,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, isLoading, logout } = useAppContext();
+  const { currentUser, isLoading, logout, updateProfile } = useAppContext();
   const router = useRouter();
   const pathname = usePathname();
+  
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [profileEditMode, setProfileEditMode] = useState<"avatar" | "username" | "password" | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !currentUser) {
@@ -73,6 +78,35 @@ export default function DashboardLayout({
   const avatarColor = getAvatarColor(currentUser.username);
   const initial = currentUser.username.charAt(0).toUpperCase();
   const roleBadge = getRoleBadgeStyle(currentUser.role);
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!profileEditMode || !editValue) return;
+    
+    setIsSavingProfile(true);
+    try {
+      const data: any = {};
+      if (profileEditMode === 'avatar') data.avatarUrl = editValue;
+      if (profileEditMode === 'username') data.username = editValue;
+      if (profileEditMode === 'password') data.password = editValue;
+      
+      const success = await updateProfile(currentUser.id, data);
+      if (success) {
+        setProfileEditMode(null);
+        setEditValue("");
+      }
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const openEditModal = (mode: "avatar" | "username" | "password") => {
+    setProfileEditMode(mode);
+    setShowProfileMenu(false);
+    if (mode === 'avatar') setEditValue(currentUser.avatarUrl || "");
+    else if (mode === 'username') setEditValue(currentUser.username);
+    else setEditValue(""); // Empty for password
+  };
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-color)' }}>
@@ -130,61 +164,102 @@ export default function DashboardLayout({
         </nav>
 
         {/* User Profile Card */}
-        <div style={{
-          padding: '1rem',
-          borderRadius: 'var(--radius-lg)',
-          backgroundColor: 'rgba(99, 102, 241, 0.04)',
-          border: '1px solid var(--border-color)',
-          marginBottom: '0.75rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-        }}>
-          {/* Avatar */}
-          <div style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: '1.1rem',
-            flexShrink: 0,
-            boxShadow: `0 2px 8px ${avatarColor}40`,
-            letterSpacing: '0.5px',
-          }}>
-            {initial}
-          </div>
-
-          {/* Info */}
-          <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ 
-              fontWeight: 600, 
-              fontSize: '0.9rem',
-              color: 'var(--text-color)',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+        <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+          <div 
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            style={{
+              padding: '1rem',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: showProfileMenu ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.04)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            {/* Avatar */}
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: currentUser.avatarUrl ? 'transparent' : `linear-gradient(135deg, ${avatarColor}, ${avatarColor}cc)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              flexShrink: 0,
+              boxShadow: `0 2px 8px ${avatarColor}40`,
+              letterSpacing: '0.5px',
+              overflow: 'hidden'
             }}>
-              {currentUser.username}
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                initial
+              )}
             </div>
-            <span style={{
-              display: 'inline-block',
-              padding: '0.1rem 0.5rem',
-              borderRadius: '999px',
-              fontSize: '0.65rem',
-              fontWeight: 600,
-              letterSpacing: '0.03em',
-              textTransform: 'uppercase',
-              marginTop: '2px',
-              ...roleBadge,
-            }}>
-              {currentUser.role}
-            </span>
+
+            {/* Info */}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ 
+                fontWeight: 600, 
+                fontSize: '0.9rem',
+                color: 'var(--text-color)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}>
+                {currentUser.username}
+              </div>
+              <span style={{
+                display: 'inline-block',
+                padding: '0.1rem 0.5rem',
+                borderRadius: '999px',
+                fontSize: '0.65rem',
+                fontWeight: 600,
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+                marginTop: '2px',
+                ...roleBadge,
+              }}>
+                {currentUser.role}
+              </span>
+            </div>
           </div>
+          
+          {/* Profile Menu Dropdown */}
+          {showProfileMenu && (
+            <div style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: 0,
+              right: 0,
+              marginBottom: '0.5rem',
+              backgroundColor: 'var(--surface-color)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-md)',
+              boxShadow: 'var(--shadow-lg)',
+              padding: '0.5rem',
+              zIndex: 50,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.25rem'
+            }}>
+              <button onClick={() => openEditModal('avatar')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
+                🖼️ Change Avatar
+              </button>
+              <button onClick={() => openEditModal('username')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
+                📝 Change Username
+              </button>
+              <button onClick={() => openEditModal('password')} className="btn" style={{ padding: '0.5rem', justifyContent: 'flex-start', background: 'transparent', color: 'var(--text-color)' }}>
+                🔑 Change Password
+              </button>
+            </div>
+          )}
         </div>
 
         <button 
@@ -213,6 +288,71 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+      
+      {/* Edit Profile Modal */}
+      {profileEditMode && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+          padding: '1rem'
+        }}>
+          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+            <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>
+              {profileEditMode === 'avatar' && 'Change Avatar'}
+              {profileEditMode === 'username' && 'Change Username'}
+              {profileEditMode === 'password' && 'Change Password'}
+            </h3>
+            <form onSubmit={handleProfileUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 500 }}>
+                  {profileEditMode === 'avatar' && 'Image URL'}
+                  {profileEditMode === 'username' && 'New Username'}
+                  {profileEditMode === 'password' && 'New Password'}
+                </label>
+                <input
+                  type={profileEditMode === 'password' ? 'password' : 'text'}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder={
+                    profileEditMode === 'avatar' ? 'https://...' :
+                    profileEditMode === 'username' ? 'Enter username' : 'Enter new password'
+                  }
+                  required
+                  disabled={isSavingProfile}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+                <button 
+                  type="submit" 
+                  className={`btn btn-primary ${isSavingProfile ? 'btn-loading' : ''}`}
+                  style={{ flex: 1, justifyContent: 'center', gap: '0.5rem' }}
+                  disabled={isSavingProfile || !editValue}
+                >
+                  {isSavingProfile ? (
+                    <><span className="spinner" /> Saving...</>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setProfileEditMode(null)} 
+                  className="btn" 
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-color)' }}
+                  disabled={isSavingProfile}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

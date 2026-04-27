@@ -117,7 +117,7 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
 }
 
 export default function TasksPage() {
-  const { currentUser, books, users, taskCounts, updateTaskCount } = useAppContext();
+  const { currentUser, books, users, taskCounts, updateTaskCount, isFetchingData } = useAppContext();
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState("All");
 
@@ -225,7 +225,7 @@ export default function TasksPage() {
               <th style={{ width: '40px', textAlign: 'center' }}>No.</th>
               <th style={{ width: '200px' }}>Book Title</th>
               <th style={{ width: '150px' }}>Author</th>
-              <th style={{ width: '120px' }}>Link</th>
+              <th style={{ width: '100px' }}>Link</th>
               <th style={{ width: '80px', textAlign: 'right' }}>Price ($)</th>
               {tableUsers.map((u) => (
                 <th key={u.id} style={{ 
@@ -241,7 +241,29 @@ export default function TasksPage() {
             </tr>
           </thead>
           <tbody>
-            {visibleBooks.map((book, index) => (
+            {isFetchingData && visibleBooks.length === 0 ? (
+              // Skeleton loader rows
+              Array.from({ length: 4 }).map((_, i) => (
+                <tr key={`skeleton-${i}`}>
+                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell" style={{ width: '20px', margin: '0 auto' }} /></td>
+                  <td><div className="skeleton skeleton-cell" style={{ width: '70%' }} /></td>
+                  <td><div className="skeleton skeleton-cell" style={{ width: '60%' }} /></td>
+                  <td><div className="skeleton skeleton-cell" style={{ width: '80px' }} /></td>
+                  <td><div className="skeleton skeleton-cell" style={{ width: '40px', marginLeft: 'auto' }} /></td>
+                  {tableUsers.length > 0 ? tableUsers.map((u) => (
+                    <td key={u.id}><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
+                  )) : (
+                    <>
+                      <td><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
+                      <td><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
+                    </>
+                  )}
+                  <td><div className="skeleton skeleton-cell" style={{ width: '40px', margin: '0 auto' }} /></td>
+                  <td><div className="skeleton skeleton-cell" style={{ width: '60px', marginLeft: 'auto' }} /></td>
+                </tr>
+              ))
+            ) : (
+              visibleBooks.map((book, index) => (
               <tr key={book.id}>
                 <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{index + 1}</td>
                 <td style={{ fontWeight: 500 }}>{book.title}</td>
@@ -250,19 +272,22 @@ export default function TasksPage() {
                   <button 
                     onClick={() => copyToClipboard(book.link)}
                     style={{
-                      background: 'none',
-                      border: 'none',
+                      background: copiedLink === book.link ? 'rgba(34, 197, 94, 0.1)' : 'rgba(99, 102, 241, 0.08)',
+                      border: `1px solid ${copiedLink === book.link ? 'rgba(34, 197, 94, 0.3)' : 'rgba(99, 102, 241, 0.2)'}`,
                       color: copiedLink === book.link ? 'var(--success-color)' : 'var(--primary-color)',
-                      fontSize: '0.85rem',
-                      display: 'flex',
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      cursor: 'pointer'
+                      gap: '5px',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.2s ease',
                     }}
                   >
-                    {copiedLink === book.link ? '✓ Copied' : '🔗 Copy Link'}
+                    {copiedLink === book.link ? '✓ Copied!' : '📋 Copy'}
                   </button>
                 </td>
                 <td style={{ textAlign: 'right' }}>{book.price.toFixed(2)}</td>
@@ -301,7 +326,8 @@ export default function TasksPage() {
                   ${calculateRowMoney(book.id, book.price).toFixed(2)}
                 </td>
               </tr>
-            ))}
+              ))
+            )}
           </tbody>
           <tfoot>
             <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderTop: '2px solid var(--border-color)' }}>

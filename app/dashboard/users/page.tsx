@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useAppContext, Role, User } from "../../context/AppContext";
 
 export default function UsersPage() {
-  const { currentUser, users, updateUserRole, deleteUser, fetchData } = useAppContext();
+  const { currentUser, users, updateUserRole, deleteUser, fetchData, isFetchingData } = useAppContext();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   if (!currentUser || currentUser.role !== "Admin") {
     return (
@@ -15,6 +17,12 @@ export default function UsersPage() {
       </div>
     );
   }
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setIsRefreshing(false);
+  };
 
   const isOnline = (u: User) => u.last_active && u.last_active > Date.now() - 2 * 60 * 1000;
 
@@ -35,9 +43,14 @@ export default function UsersPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <div style={{ 
             width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--border-color)', 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--text-muted)'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'var(--text-muted)',
+            overflow: 'hidden'
           }}>
-            {u.username.charAt(0).toUpperCase()}
+            {u.avatarUrl ? (
+              <img src={u.avatarUrl} alt={u.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              u.username.charAt(0).toUpperCase()
+            )}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -85,7 +98,21 @@ export default function UsersPage() {
     );
   };
 
-  const renderColumn = (title: string, data: User[], titleColor: string) => (
+  const renderSkeletonRows = (count: number) => (
+    Array.from({ length: count }).map((_, i) => (
+      <div key={`skeleton-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid var(--border-color)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div className="skeleton skeleton-avatar" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div className="skeleton skeleton-cell" style={{ width: `${80 + Math.random() * 40}px` }} />
+          </div>
+        </div>
+        <div className="skeleton" style={{ width: '70px', height: '28px', borderRadius: 'var(--radius-md)' }} />
+      </div>
+    ))
+  );
+
+  const renderColumn = (title: string, data: User[], titleColor: string, skeletonCount: number) => (
     <div style={{ flex: 1, minWidth: '300px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, color: titleColor }}>{title}</h3>
@@ -98,7 +125,11 @@ export default function UsersPage() {
           <span>USER</span>
           <span>ACTION</span>
         </div>
-        {data.map(renderUserRow)}
+        {(isFetchingData || isRefreshing) && data.length === 0 ? (
+          renderSkeletonRows(skeletonCount)
+        ) : (
+          data.map(renderUserRow)
+        )}
       </div>
     </div>
   );
@@ -118,18 +149,32 @@ export default function UsersPage() {
         </div>
         
         <button 
-          onClick={() => fetchData()}
-          className="btn"
-          style={{ backgroundColor: 'var(--bg-color)', color: 'var(--text-color)', border: '1px solid var(--border-color)', fontWeight: 600 }}
+          onClick={handleRefresh}
+          className={`btn ${isRefreshing ? 'btn-loading' : ''}`}
+          style={{ 
+            backgroundColor: 'var(--bg-color)', 
+            color: 'var(--text-color)', 
+            border: '1px solid var(--border-color)', 
+            fontWeight: 600,
+            gap: '0.5rem',
+          }}
+          disabled={isRefreshing}
         >
-          Refresh List
+          {isRefreshing ? (
+            <>
+              <span className="spinner spinner-dark" style={{ width: '16px', height: '16px' }} />
+              Refreshing...
+            </>
+          ) : (
+            'Refresh List'
+          )}
         </button>
       </div>
 
       <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-        {renderColumn("Administrators", admins, "var(--primary-color)")}
-        {renderColumn("Verified Users", verifiedUsers, "var(--info-color, #3b82f6)")}
-        {renderColumn("Guests / Pending", guests, "var(--warning-color, #f97316)")}
+        {renderColumn("Administrators", admins, "var(--primary-color)", 2)}
+        {renderColumn("Verified Users", verifiedUsers, "var(--info-color, #3b82f6)", 3)}
+        {renderColumn("Guests / Pending", guests, "var(--warning-color, #f97316)", 2)}
       </div>
     </div>
   );

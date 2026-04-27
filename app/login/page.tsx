@@ -8,6 +8,7 @@ import Link from "next/link";
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, currentUser, isLoading } = useAppContext();
   const router = useRouter();
 
@@ -23,7 +24,12 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(username, password);
+    setIsSubmitting(true);
+    try {
+      await login(username, password);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -44,6 +50,7 @@ export default function Login() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div>
@@ -55,11 +62,24 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               required
+              disabled={isSubmitting}
             />
           </div>
           
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '0.875rem' }}>
-            Sign In
+          <button 
+            type="submit" 
+            className={`btn btn-primary ${isSubmitting ? 'btn-loading' : ''}`}
+            style={{ width: '100%', padding: '0.875rem', gap: '0.5rem' }}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <span className="spinner" />
+                Signing in...
+              </>
+            ) : (
+              'Sign In'
+            )}
           </button>
         </form>
         
