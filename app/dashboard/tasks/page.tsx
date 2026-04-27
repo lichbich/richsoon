@@ -459,8 +459,7 @@ export default function TasksPage() {
                   const count = taskCounts[book.id]?.[u.id] || 0;
                   const isCurrentUser = u.id === currentUser.id;
                   const isAssigned = book.assignedUsers?.includes(u.id);
-                  // Admin can edit their own counts even if not explicitly assigned
-                  const canEdit = isCurrentUser && (isAssigned || currentUser.role === "Admin");
+                  const canEdit = isCurrentUser && isAssigned;
                   
                   return (
                     <td key={u.id} style={{ 

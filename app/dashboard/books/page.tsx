@@ -266,7 +266,7 @@ export default function BooksPage() {
                 <td>
                   <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     {activeUsers.map(user => {
-                      const isAssigned = book.assignedUsers?.includes(user.id);
+                      const isAssigned = book.assignedUsers?.includes(user.id) || false;
                       const isSaving = savingAssignments.has(`${book.id}:${user.id}`);
                       return (
                         <label key={user.id} style={{ 
