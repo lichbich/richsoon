@@ -43,6 +43,8 @@ export default function DashboardLayout({
   const [profileEditMode, setProfileEditMode] = useState<"avatar" | "username" | "password" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isHoveringProfile, setIsHoveringProfile] = useState(false);
+  const [viewingAvatarUrl, setViewingAvatarUrl] = useState<string | null>(null);
   
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -179,20 +181,31 @@ export default function DashboardLayout({
         <div ref={menuRef} style={{ position: 'relative', marginBottom: '0.75rem' }}>
           <div 
             onClick={() => setShowProfileMenu(!showProfileMenu)}
+            onMouseEnter={() => setIsHoveringProfile(true)}
+            onMouseLeave={() => setIsHoveringProfile(false)}
             style={{
               padding: '1rem',
               borderRadius: 'var(--radius-lg)',
-              backgroundColor: showProfileMenu ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.04)',
-              border: '1px solid var(--border-color)',
+              backgroundColor: showProfileMenu || isHoveringProfile ? 'rgba(99, 102, 241, 0.1)' : 'rgba(99, 102, 241, 0.04)',
+              border: `1px solid ${showProfileMenu || isHoveringProfile ? 'rgba(99, 102, 241, 0.3)' : 'var(--border-color)'}`,
               display: 'flex',
               alignItems: 'center',
               gap: '0.75rem',
               cursor: 'pointer',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              transform: isHoveringProfile ? 'translateY(-2px)' : 'none',
+              boxShadow: isHoveringProfile ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
             }}
           >
             {/* Avatar */}
-            <div style={{
+            <div 
+              onClick={(e) => {
+                if (currentUser.avatarUrl) {
+                  e.stopPropagation(); // prevent opening the menu
+                  setViewingAvatarUrl(currentUser.avatarUrl);
+                }
+              }}
+              style={{
               width: '42px',
               height: '42px',
               borderRadius: '50%',
@@ -206,7 +219,8 @@ export default function DashboardLayout({
               flexShrink: 0,
               boxShadow: `0 2px 8px ${avatarColor}40`,
               letterSpacing: '0.5px',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              cursor: currentUser.avatarUrl ? 'zoom-in' : 'inherit'
             }}>
               {currentUser.avatarUrl ? (
                 <img src={currentUser.avatarUrl} alt={currentUser.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -368,6 +382,37 @@ export default function DashboardLayout({
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Fullscreen Avatar Viewer */}
+      {viewingAvatarUrl && (
+        <div 
+          onClick={() => setViewingAvatarUrl(null)}
+          className="animate-fade-in"
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '2rem',
+            cursor: 'zoom-out'
+          }}
+        >
+          <img 
+            src={viewingAvatarUrl} 
+            alt="Avatar Fullscreen" 
+            style={{ 
+              maxWidth: '100%', 
+              maxHeight: '100%', 
+              objectFit: 'contain', 
+              borderRadius: '8px',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.5)'
+            }} 
+          />
         </div>
       )}
     </div>
