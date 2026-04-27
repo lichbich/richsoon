@@ -87,7 +87,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         fetch(`${API_URL}/taskCounts`).catch(() => null)
       ]);
       
-      if (usersRes?.ok) setUsers(await usersRes.json() || []);
+      if (usersRes?.ok) {
+        const fetchedUsers = await usersRes.json() || [];
+        setUsers(fetchedUsers);
+        
+        // Sync current user data if it exists
+        if (currentUser) {
+          const updatedSelf = fetchedUsers.find((u: any) => u.id === currentUser.id);
+          if (updatedSelf && (updatedSelf.username !== currentUser.username || updatedSelf.role !== currentUser.role || updatedSelf.avatarUrl !== currentUser.avatarUrl)) {
+            setCurrentUser(updatedSelf);
+            localStorage.setItem(SESSION_KEY, JSON.stringify(updatedSelf));
+          }
+        }
+      }
       if (booksRes?.ok) setBooks(await booksRes.json() || []);
       if (tasksRes?.ok) setTaskCounts(await tasksRes.json() || {});
     } catch (err) {

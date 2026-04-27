@@ -15,6 +15,11 @@ export default function BooksPage() {
   const [selectedAuthor, setSelectedAuthor] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [savingAssignments, setSavingAssignments] = useState<Set<string>>(new Set());
+  const [assigningBookId, setAssigningBookId] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState("");
+
+  const activeUsers = users.filter(u => u.role !== "Guest");
+  const assigningBook = books.find(b => b.id === assigningBookId);
 
   // Bulk Selection States
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -42,7 +47,6 @@ export default function BooksPage() {
     );
   }
 
-  const activeUsers = users.filter(u => u.role !== "Guest");
 
   const startEdit = (book: any) => {
     setEditingId(book.id);
@@ -525,6 +529,114 @@ export default function BooksPage() {
         document.body
       )}
 
+      {/* Assignment Modal */}
+      {assigningBookId && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(10px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '1rem',
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div className="card" style={{ 
+            width: '100%', 
+            maxWidth: '500px', 
+            maxHeight: '80vh', 
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '1.5rem',
+            backgroundColor: 'var(--surface-color)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            animation: 'modalSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div>
+                <h3 style={{ margin: 0, color: 'var(--primary-color)' }}>Manage Access</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '350px' }}>
+                  {assigningBook?.title}
+                </p>
+              </div>
+              <button onClick={() => setAssigningBookId(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <input 
+                type="text" 
+                placeholder="Search users..." 
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                style={{ width: '100%', padding: '0.6rem 1rem', fontSize: '0.9rem', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: '10px' }}
+              />
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1.5rem', paddingRight: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {activeUsers
+                  .filter(u => u.username.toLowerCase().includes(userSearch.toLowerCase()))
+                  .map(user => {
+                    const isAssigned = assigningBook?.assignedUsers?.includes(user.id) || false;
+                    const isSaving = savingAssignments.has(`${assigningBookId}:${user.id}`);
+                    return (
+                      <label key={user.id} style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        padding: '0.8rem 1rem',
+                        borderRadius: '10px',
+                        backgroundColor: isAssigned ? 'rgba(99, 102, 241, 0.08)' : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        border: `1px solid ${isAssigned ? 'rgba(99, 102, 241, 0.2)' : 'transparent'}`
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                          <div style={{ 
+                            width: '32px', height: '32px', borderRadius: '50%', 
+                            backgroundColor: isAssigned ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', 
+                            color: 'white',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.8rem', fontWeight: 600
+                          }}>
+                            {user.username.charAt(0).toUpperCase()}
+                          </div>
+                          <span style={{ fontWeight: 500, fontSize: '0.95rem', color: isAssigned ? '#fff' : 'var(--text-color)' }}>{user.username}</span>
+                        </div>
+                        {isSaving ? (
+                          <span className="spinner spinner-dark" style={{ width: '16px', height: '16px' }} />
+                        ) : (
+                          <input 
+                            type="checkbox" 
+                            checked={isAssigned}
+                            onChange={() => toggleAssignment(assigningBookId!, user.id, assigningBook?.assignedUsers || [])}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                        )}
+                      </label>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                setAssigningBookId(null);
+                setUserSearch("");
+              }}
+              style={{ width: '100%', padding: '0.8rem', fontWeight: 600 }}
+            >
+              Done
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+
       <div className="card" style={{ marginBottom: '2rem' }}>
         <h3 style={{ marginBottom: '1.5rem', color: 'var(--primary-color)' }}>
           {editingId ? "Edit Book" : "Add New Book"}
@@ -571,11 +683,11 @@ export default function BooksPage() {
                   style={{ width: 'auto', cursor: 'pointer' }}
                 />
               </th>
-              <th style={{ width: '20%' }}>Book Title</th>
+              <th style={{ width: '25%' }}>Book Title</th>
               <th style={{ width: '15%' }}>Author</th>
               <th style={{ width: '10%', textAlign: 'right' }}>Price</th>
-              <th style={{ width: '40%' }}>Assigned Users</th>
-              <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>
+              <th style={{ width: '25%' }}>Access Control</th>
+              <th style={{ width: '25%', textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -596,44 +708,24 @@ export default function BooksPage() {
                 <td style={{ color: 'var(--text-muted)' }}>{book.author}</td>
                 <td style={{ textAlign: 'right' }}>${book.price.toFixed(2)}</td>
                 <td>
-                  <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                    {activeUsers.map(user => {
-                      const isAssigned = book.assignedUsers?.includes(user.id) || false;
-                      const isSaving = savingAssignments.has(`${book.id}:${user.id}`);
-                      return (
-                        <label key={user.id} style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.4rem',
-                          cursor: isSaving ? 'wait' : 'pointer',
-                          padding: '0.3rem 0.6rem',
-                          borderRadius: 'var(--radius-md)',
-                          backgroundColor: isAssigned ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                          border: `1px solid ${isAssigned ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                          opacity: isSaving ? 0.6 : 1,
-                          transition: 'all 0.2s ease',
-                          position: 'relative',
-                        }}>
-                          {isSaving ? (
-                            <span className="spinner spinner-dark" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
-                          ) : (
-                            <input 
-                              type="checkbox" 
-                              checked={isAssigned}
-                              onChange={() => toggleAssignment(book.id, user.id, book.assignedUsers || [])}
-                              style={{ width: 'auto', margin: 0 }}
-                            />
-                          )}
-                          <span style={{ 
-                            fontSize: '0.875rem',
-                            color: isAssigned ? 'var(--primary-color)' : 'var(--text-color)'
-                          }}>
-                            {user.username}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
+                  <button 
+                    onClick={() => setAssigningBookId(book.id)}
+                    className="btn"
+                    style={{ 
+                      padding: '0.5rem 1rem', 
+                      fontSize: '0.85rem', 
+                      backgroundColor: 'rgba(99, 102, 241, 0.1)', 
+                      color: 'var(--primary-color)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.6rem',
+                      fontWeight: 600,
+                      borderRadius: '8px'
+                    }}
+                  >
+                    👤 {book.assignedUsers?.length || 0} Assigned
+                  </button>
                 </td>
                 <td style={{ textAlign: 'right' }}>
                   <button 

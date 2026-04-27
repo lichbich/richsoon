@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useAppContext } from "../../context/AppContext";
 
 // Separate component for editable task count cell to manage local state
@@ -9,7 +10,6 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Sync local value when external data changes
   useEffect(() => {
     setLocalValue(currentCount ? String(currentCount) : '');
   }, [currentCount]);
@@ -18,7 +18,6 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    // Only allow digits and empty string
     if (val === '' || /^\d+$/.test(val)) {
       setLocalValue(val);
       setShowSuccess(false);
@@ -68,133 +67,76 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      gap: '8px',
-      position: 'relative'
-    }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <button 
-          onClick={handleIncrement}
-          style={{
-            background: 'rgba(99, 102, 241, 0.1)',
-            border: 'none',
-            borderRadius: '4px',
-            color: 'var(--primary-color)',
-            cursor: 'pointer',
-            padding: '2px 6px',
-            fontSize: '0.75rem',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
-        >
-          ▲
-        </button>
-        <button 
-          onClick={handleDecrement}
-          style={{
-            background: 'rgba(99, 102, 241, 0.1)',
-            border: 'none',
-            borderRadius: '4px',
-            color: 'var(--primary-color)',
-            cursor: 'pointer',
-            padding: '2px 6px',
-            fontSize: '0.75rem',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.2)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(99, 102, 241, 0.1)'}
-        >
-          ▼
-        </button>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+        <button onClick={handleIncrement} className="count-btn">▲</button>
+        <button onClick={handleDecrement} className="count-btn">▼</button>
       </div>
-      
       <input
         type="text"
         inputMode="numeric"
-        pattern="[0-9]*"
         value={localValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="0"
-        style={{ 
-          width: '70px', 
-          padding: '0.5rem 0.4rem', 
-          textAlign: 'center',
-          fontSize: '1.1rem',
-          fontWeight: 600,
-          borderRadius: '8px',
-          border: isDirty 
-            ? '2px solid var(--primary-color)' 
-            : showSuccess 
-              ? '2px solid var(--success-color)'
-              : '1px solid var(--border-color)',
-          backgroundColor: isDirty ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-color)',
-          transition: 'all 0.2s ease',
-          outline: 'none',
-          boxShadow: isDirty ? '0 0 0 3px rgba(99, 102, 241, 0.15)' : 'none',
-          color: 'var(--text-color)',
-        }}
+        className="count-input"
+        style={{ borderColor: isDirty ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)' }}
       />
-
       <button
         onClick={handleSave}
         disabled={!isDirty || isSaving}
-        style={{
-          padding: '0.5rem 1rem',
-          borderRadius: '8px',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          cursor: isDirty ? 'pointer' : 'default',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          backgroundColor: showSuccess 
-            ? 'rgba(34, 197, 94, 0.1)' 
-            : isDirty 
-              ? 'var(--primary-color)' 
-              : 'rgba(99, 102, 241, 0.05)',
-          color: showSuccess 
-            ? 'var(--success-color)' 
-            : isDirty 
-              ? 'white' 
-              : 'rgba(99, 102, 241, 0.4)',
-          minWidth: '60px',
-          height: '38px',
-          boxShadow: isDirty && !showSuccess ? '0 4px 12px rgba(99, 102, 241, 0.25)' : 'none',
-          opacity: isSaving ? 0.8 : 1,
-          transform: isDirty && !isSaving ? 'scale(1)' : 'scale(0.98)',
-        }}
+        className={`save-btn ${isDirty ? 'dirty' : ''} ${showSuccess ? 'success' : ''}`}
       >
-        {isSaving ? (
-          <span className="spinner" style={{ 
-            width: '16px', 
-            height: '16px', 
-            borderWidth: '2px',
-            borderTopColor: isDirty ? 'white' : 'var(--primary-color)' 
-          }} />
-        ) : showSuccess ? (
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '1rem' }}>✓</span> Done
-          </span>
-        ) : (
-          'Save'
-        )}
+        {isSaving ? '...' : showSuccess ? '✓' : 'Save'}
       </button>
+
+      <style>{`
+        .count-btn {
+          background: rgba(99, 102, 241, 0.1);
+          border: none;
+          color: var(--primary-color);
+          cursor: pointer;
+          font-size: 0.6rem;
+          padding: 1px 4px;
+          border-radius: 2px;
+        }
+        .count-input {
+          width: 50px;
+          padding: 0.3rem;
+          text-align: center;
+          font-size: 0.95rem;
+          font-weight: 600;
+          border-radius: 6px;
+          border: 1px solid;
+          background: rgba(0,0,0,0.2);
+          color: #fff;
+          outline: none;
+        }
+        .save-btn {
+          border: none;
+          padding: 0.3rem 0.6rem;
+          border-radius: 6px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          cursor: pointer;
+          background: rgba(255,255,255,0.05);
+          color: rgba(255,255,255,0.3);
+          transition: all 0.2s;
+        }
+        .save-btn.dirty { background: var(--primary-color); color: #fff; }
+        .save-btn.success { background: rgba(34, 197, 94, 0.2); color: var(--success-color); }
+      `}</style>
     </div>
   );
 }
 
 export default function TasksPage() {
   const { currentUser, books, users, taskCounts, updateTaskCount, isFetchingData } = useAppContext();
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedAuthor, setSelectedAuthor] = useState("All");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [viewingBook, setViewingBook] = useState<any>(null);
+
+  const [viewMode, setViewMode] = useState<"personal" | "all">("personal");
 
   if (!currentUser) return null;
 
@@ -202,45 +144,38 @@ export default function TasksPage() {
     return (
       <div className="card" style={{ textAlign: 'center', padding: '4rem' }}>
         <h2 style={{ color: 'var(--danger-color)', marginBottom: '1rem' }}>Access Denied</h2>
-        <p style={{ color: 'var(--text-muted)' }}>
-          Your account is currently pending. Please wait for an Admin to grant you access.
-        </p>
+        <p style={{ color: 'var(--text-muted)' }}>Your account is pending Admin approval.</p>
       </div>
     );
   }
 
-  // Filter books
-  let visibleBooks = currentUser.role === "Admin"
-    ? books
-    : books.filter(b => b.assignedUsers?.includes(currentUser.id));
+  // Filter books logic
+  let visibleBooks = books.filter(b => b.assignedUsers && b.assignedUsers.length > 0);
 
-  // Apply author filter
+  if (currentUser.role !== "Admin" || viewMode === "personal") {
+    visibleBooks = visibleBooks.filter(b => b.assignedUsers?.includes(currentUser.id));
+  }
+
   const uniqueAuthors = ["All", ...Array.from(new Set(books.map(b => b.author).filter(Boolean)))];
   if (selectedAuthor !== "All") {
     visibleBooks = visibleBooks.filter(b => b.author === selectedAuthor);
   }
 
-  // Find users sharing these books
   const visibleUserIds = new Set<string>();
   visibleBooks.forEach(b => {
     b.assignedUsers?.forEach(uid => visibleUserIds.add(uid));
   });
 
-  // Filter users who should be in the table
-  const tableUsers = users.filter((u) => {
-    if (u.role === "Guest") return false;
-    if (currentUser.role === "Admin") return true; // Admins see everyone
-    return visibleUserIds.has(u.id);
-  });
+  const tableUsers = (viewMode === "all" && currentUser.role === "Admin")
+    ? users.filter((u) => u.role !== "Guest" && visibleUserIds.has(u.id))
+    : users.filter((u) => u.id === currentUser.id);
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (bookId: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedLink(text);
-      setTimeout(() => setCopiedLink(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy", err);
-    }
+      setCopiedId(bookId);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {}
   };
 
   const handleSaveCount = async (bookId: string, count: number) => {
@@ -255,10 +190,6 @@ export default function TasksPage() {
     return calculateRowTotal(bookId) * price;
   };
 
-  const calculateUserTotal = (userId: string) => {
-    return visibleBooks.reduce((sum, book) => sum + (taskCounts[book.id]?.[userId] || 0), 0);
-  };
-
   const calculateUserMoney = (userId: string) => {
     return visibleBooks.reduce((sum, book) => sum + (taskCounts[book.id]?.[userId] || 0) * book.price, 0);
   };
@@ -271,15 +202,153 @@ export default function TasksPage() {
     return visibleBooks.reduce((sum, book) => sum + calculateRowMoney(book.id, book.price), 0);
   };
 
+  const isPersonal = viewMode === "personal";
+  
+  // DYNAMIC COLUMN WIDTHS
+  const COL_NO = 50;
+  const COL_TITLE = isPersonal ? 450 : 200; // Give much more space to Title in personal mode
+  const COL_AUTHOR = 150;
+  const COL_LINK = 70;
+  const COL_PRICE = 80;
+  const COL_TOTAL_MONEY = 130;
+  const COL_TOTAL_COUNT = 110;
+
+  const BG_SOLID = "var(--surface-color)"; // MATCH THE CARD COLOR FOR SEAMLESS STICKY EFFECT
+
   return (
-    <div>
+    <div style={{ maxWidth: '100vw' }}>
+      <style>{`
+        .table-container {
+          width: 100%;
+          overflow-x: auto;
+          background: var(--surface-color);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          position: relative;
+        }
+        .task-table {
+          border-collapse: separate;
+          border-spacing: 0;
+          width: ${isPersonal ? '100%' : 'max-content'};
+          min-width: 100%;
+          table-layout: ${isPersonal ? 'auto' : 'fixed'};
+        }
+        .task-table th, .task-table td {
+          padding: 12px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          white-space: ${isPersonal ? 'normal' : 'nowrap'};
+          background: ${BG_SOLID};
+        }
+        
+        /* STICKY LOGIC - LEFT */
+        .sticky-left {
+          position: ${isPersonal ? 'static' : 'sticky'} !important;
+          z-index: 50;
+          background: ${BG_SOLID} !important;
+          box-shadow: ${isPersonal ? 'none' : '2px 0 5px rgba(0,0,0,0.5)'};
+        }
+        .sticky-left-last {
+          border-right: ${isPersonal ? 'none' : '2px solid var(--primary-color)'} !important;
+        }
+        
+        /* STICKY LOGIC - RIGHT */
+        .sticky-right {
+          position: ${isPersonal ? 'static' : 'sticky'} !important;
+          z-index: 50;
+          background: ${BG_SOLID} !important;
+          box-shadow: ${isPersonal ? 'none' : '-2px 0 5px rgba(0,0,0,0.5)'};
+        }
+        .sticky-right-first {
+          border-left: ${isPersonal ? 'none' : '2px solid var(--primary-color)'} !important;
+        }
+
+        /* HEADERS */
+        .task-table thead th {
+          background: #1e293b !important;
+          z-index: 60;
+          border-bottom: 2px solid var(--border-color);
+        }
+        .task-table tfoot td {
+          background: #1e293b !important;
+          z-index: 60;
+          border-top: 2px solid var(--border-color);
+        }
+
+        .book-title-cell {
+          max-width: ${COL_TITLE}px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          cursor: pointer;
+          color: #fff;
+          font-weight: 500;
+        }
+        .book-title-cell:hover { color: var(--primary-color); }
+        
+        .copy-btn {
+          width: 32px;
+          height: 32px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      `}</style>
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h1 style={{ margin: 0, color: 'var(--text-color)' }}>Tasks Overview</h1>
-          <p style={{ color: 'var(--text-muted)', margin: 0 }}>Manage book links and completion counts</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ margin: 0, color: 'var(--text-color)' }}>Tasks Overview</h1>
+            <p style={{ color: 'var(--text-muted)', margin: 0 }}>Sticky columns for Book info & Totals</p>
+          </div>
+
+          {currentUser.role === "Admin" && (
+            <div style={{ 
+              display: 'flex', 
+              background: 'rgba(0,0,0,0.2)', 
+              padding: '4px', 
+              borderRadius: '10px',
+              border: '1px solid rgba(255,255,255,0.05)'
+            }}>
+              <button 
+                onClick={() => setViewMode("personal")}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: viewMode === "personal" ? 'var(--primary-color)' : 'transparent',
+                  color: viewMode === "personal" ? '#fff' : 'var(--text-muted)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                My Tasks
+              </button>
+              <button 
+                onClick={() => setViewMode("all")}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '7px',
+                  border: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: viewMode === "all" ? 'var(--primary-color)' : 'transparent',
+                  color: viewMode === "all" ? '#fff' : 'var(--text-muted)',
+                  transition: 'all 0.2s'
+                }}
+              >
+                All Overview
+              </button>
+            </div>
+          )}
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative', zIndex: 1000 }}>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 500 }}>Filter by Author:</span>
           
           <div style={{ position: 'relative', minWidth: '180px' }}>
@@ -332,7 +401,8 @@ export default function TasksPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '2px',
-                  animation: 'dropdownIn 0.2s ease-out'
+                  animation: 'dropdownIn 0.2s ease-out',
+                  zIndex: 100,
                 }}>
                   <style>{`
                     @keyframes dropdownIn {
@@ -376,136 +446,114 @@ export default function TasksPage() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: '0', overflowX: 'auto', borderRadius: 'var(--radius-lg)' }}>
-        <table style={{ minWidth: '1000px', width: '100%' }}>
+      <div className="table-container">
+        <table className="task-table">
           <thead>
             <tr>
-              <th style={{ width: '40px', textAlign: 'center' }}>No.</th>
-              <th style={{ width: '200px' }}>Book Title</th>
-              <th style={{ width: '150px' }}>Author</th>
-              <th style={{ width: '100px' }}>Link</th>
-              <th style={{ width: '80px', textAlign: 'right' }}>Price ($)</th>
-              {tableUsers.map((u) => (
-                <th key={u.id} style={{ 
-                  textAlign: 'center', 
-                  backgroundColor: u.id === currentUser.id ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
-                  color: u.id === currentUser.id ? 'var(--primary-color)' : 'var(--text-muted)'
-                }}>
-                  {u.username}
-                </th>
+              <th className="sticky-left" style={{ left: 0, width: COL_NO }}>NO.</th>
+              <th className="sticky-left" style={{ left: COL_NO, width: COL_TITLE }}>BOOK TITLE</th>
+              <th className="sticky-left" style={{ left: COL_NO + COL_TITLE, width: COL_AUTHOR }}>AUTHOR</th>
+              <th className="sticky-left" style={{ left: COL_NO + COL_TITLE + COL_AUTHOR, width: COL_LINK, textAlign: 'center' }}>LINK</th>
+              <th className="sticky-left sticky-left-last" style={{ left: COL_NO + COL_TITLE + COL_AUTHOR + COL_LINK, width: COL_PRICE, textAlign: 'right' }}>PRICE</th>
+              
+              {tableUsers.map(u => (
+                <th key={u.id} style={{ textAlign: 'center', minWidth: isPersonal ? '180px' : '220px', color: u.id === currentUser.id ? 'var(--primary-color)' : 'inherit' }}>{u.username}</th>
               ))}
-              <th style={{ textAlign: 'center', color: 'var(--secondary-color)' }}>Total Count</th>
-              <th style={{ textAlign: 'right', color: 'var(--success-color)' }}>Total Money</th>
+              
+              <th className="sticky-right sticky-right-first" style={{ right: COL_TOTAL_MONEY, width: COL_TOTAL_COUNT, textAlign: 'center' }}>COUNT</th>
+              <th className="sticky-right" style={{ right: 0, width: COL_TOTAL_MONEY, textAlign: 'right' }}>MONEY</th>
             </tr>
           </thead>
           <tbody>
-            {isFetchingData && visibleBooks.length === 0 ? (
-              // Skeleton loader rows
-              Array.from({ length: 4 }).map((_, i) => (
-                <tr key={`skeleton-${i}`}>
-                  <td style={{ textAlign: 'center' }}><div className="skeleton skeleton-cell" style={{ width: '20px', margin: '0 auto' }} /></td>
-                  <td><div className="skeleton skeleton-cell" style={{ width: '70%' }} /></td>
-                  <td><div className="skeleton skeleton-cell" style={{ width: '60%' }} /></td>
-                  <td><div className="skeleton skeleton-cell" style={{ width: '80px' }} /></td>
-                  <td><div className="skeleton skeleton-cell" style={{ width: '40px', marginLeft: 'auto' }} /></td>
-                  {tableUsers.length > 0 ? tableUsers.map((u) => (
-                    <td key={u.id}><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
-                  )) : (
-                    <>
-                      <td><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
-                      <td><div className="skeleton skeleton-cell" style={{ width: '50px', margin: '0 auto' }} /></td>
-                    </>
-                  )}
-                  <td><div className="skeleton skeleton-cell" style={{ width: '40px', margin: '0 auto' }} /></td>
-                  <td><div className="skeleton skeleton-cell" style={{ width: '60px', marginLeft: 'auto' }} /></td>
+            {visibleBooks.map((book, index) => {
+              const isAssignedToMe = book.assignedUsers?.includes(currentUser.id);
+              const rowOpacity = isAssignedToMe || currentUser.role === "Admin" ? 1 : 0.4;
+              const isDimmed = !isAssignedToMe && currentUser.role === "Admin";
+
+              return (
+                <tr key={book.id} style={{ opacity: isDimmed ? 0.5 : 1, transition: 'opacity 0.2s' }}>
+                  <td className="sticky-left" style={{ left: 0, textAlign: 'center', color: 'var(--text-muted)' }}>{index + 1}</td>
+                  <td className="sticky-left book-title-cell" style={{ left: COL_NO }} onClick={() => setViewingBook(book)} title={book.title}>
+                    {book.title}
+                  </td>
+                  <td className="sticky-left" style={{ left: COL_NO + COL_TITLE, color: 'var(--text-muted)' }}>
+                    <div style={{ maxWidth: COL_AUTHOR, overflow: 'hidden', textOverflow: 'ellipsis' }}>{book.author}</div>
+                  </td>
+                  <td className="sticky-left" style={{ left: COL_NO + COL_TITLE + COL_AUTHOR, textAlign: 'center' }}>
+                    <button 
+                      onClick={() => isAssignedToMe && copyToClipboard(book.id, book.link)} 
+                      disabled={!isAssignedToMe}
+                      className="copy-btn"
+                      style={{ 
+                        background: !isAssignedToMe ? 'rgba(255,255,255,0.05)' : copiedId === book.id ? 'rgba(34, 197, 94, 0.2)' : 'rgba(99, 102, 241, 0.1)', 
+                        color: !isAssignedToMe ? 'rgba(255,255,255,0.1)' : copiedId === book.id ? 'var(--success-color)' : 'var(--primary-color)',
+                        cursor: isAssignedToMe ? 'pointer' : 'not-allowed',
+                        opacity: isAssignedToMe ? 1 : 0.5
+                      }}
+                      title={isAssignedToMe ? "Copy Link" : "You are not assigned to this book"}
+                    >
+                      {copiedId === book.id ? '✓' : '📋'}
+                    </button>
+                  </td>
+                  <td className="sticky-left sticky-left-last" style={{ left: COL_NO + COL_TITLE + COL_AUTHOR + COL_LINK, textAlign: 'right', fontWeight: 600 }}>
+                    ${book.price.toFixed(2)}
+                  </td>
+
+                  {tableUsers.map(u => {
+                    const count = taskCounts[book.id]?.[u.id] || 0;
+                    const canEdit = u.id === currentUser.id && isAssignedToMe;
+                    return (
+                      <td key={u.id} style={{ textAlign: 'center', background: u.id === currentUser.id ? 'rgba(99, 102, 241, 0.02)' : 'inherit' }}>
+                        {canEdit ? (
+                          <TaskCountInput bookId={book.id} currentCount={count} onSave={handleSaveCount} />
+                        ) : (
+                          <span style={{ opacity: count > 0 ? 1 : 0.2, fontWeight: u.id === currentUser.id ? 700 : 400 }}>{count || '-'}</span>
+                        )}
+                      </td>
+                    );
+                  })}
+
+                  <td className="sticky-right sticky-right-first" style={{ right: COL_TOTAL_MONEY, textAlign: 'center', fontWeight: 'bold' }}>{calculateRowTotal(book.id)}</td>
+                  <td className="sticky-right" style={{ right: 0, textAlign: 'right', fontWeight: 'bold', color: 'var(--success-color)' }}>
+                    ${calculateRowMoney(book.id, book.price).toFixed(2)}
+                  </td>
                 </tr>
-              ))
-            ) : (
-              visibleBooks.map((book, index) => (
-              <tr key={book.id}>
-                <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{index + 1}</td>
-                <td style={{ fontWeight: 500 }}>{book.title}</td>
-                <td style={{ color: 'var(--text-muted)' }}>{book.author}</td>
-                <td>
-                  <button 
-                    onClick={() => copyToClipboard(book.link)}
-                    style={{
-                      background: copiedLink === book.link ? 'rgba(34, 197, 94, 0.1)' : 'rgba(99, 102, 241, 0.08)',
-                      border: `1px solid ${copiedLink === book.link ? 'rgba(34, 197, 94, 0.3)' : 'rgba(99, 102, 241, 0.2)'}`,
-                      color: copiedLink === book.link ? 'var(--success-color)' : 'var(--primary-color)',
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {copiedLink === book.link ? '✓ Copied!' : '📋 Copy'}
-                  </button>
-                </td>
-                <td style={{ textAlign: 'right' }}>{book.price.toFixed(2)}</td>
-                
-                {tableUsers.map((u) => {
-                  const count = taskCounts[book.id]?.[u.id] || 0;
-                  const isCurrentUser = u.id === currentUser.id;
-                  const isAssigned = book.assignedUsers?.includes(u.id);
-                  const canEdit = isCurrentUser && isAssigned;
-                  
-                  return (
-                    <td key={u.id} style={{ 
-                      textAlign: 'center',
-                      padding: canEdit ? '0.5rem' : '1rem',
-                    }}>
-                      {canEdit ? (
-                        <TaskCountInput
-                          bookId={book.id}
-                          currentCount={count}
-                          onSave={handleSaveCount}
-                        />
-                      ) : (
-                        <span style={{ color: count > 0 ? 'var(--text-color)' : 'var(--text-muted)' }}>
-                          {count || '-'}
-                        </span>
-                      )}
-                    </td>
-                  );
-                })}
-                
-                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>
-                  {calculateRowTotal(book.id)}
-                </td>
-                <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--success-color)' }}>
-                  ${calculateRowMoney(book.id, book.price).toFixed(2)}
-                </td>
-              </tr>
-              ))
-            )}
+              );
+            })}
           </tbody>
           <tfoot>
-            <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderTop: '2px solid var(--border-color)' }}>
-              <td colSpan={5} style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--danger-color)' }}>
-                TỔNG LÚA (Total Money):
+            <tr>
+              <td className="sticky-left sticky-left-last" style={{ left: 0, textAlign: 'right', fontWeight: 'bold', color: 'var(--danger-color)' }} colSpan={5}>
+                TOTALS:
               </td>
-              {tableUsers.map((u) => (
+              {tableUsers.map(u => (
                 <td key={u.id} style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--danger-color)' }}>
                   ${calculateUserMoney(u.id).toFixed(2)}
                 </td>
               ))}
-              <td style={{ textAlign: 'center', fontWeight: 'bold', color: 'var(--danger-color)' }}>
-                {calculateGrandTotalCount()}
-              </td>
-              <td style={{ textAlign: 'right', fontWeight: 'bold', color: 'var(--danger-color)' }}>
-                ${calculateGrandTotalMoney().toFixed(2)}
-              </td>
+              <td className="sticky-right sticky-right-first" style={{ right: COL_TOTAL_MONEY, textAlign: 'center', fontWeight: 'bold', color: 'var(--danger-color)' }}>{calculateGrandTotalCount()}</td>
+              <td className="sticky-right" style={{ right: 0, textAlign: 'right', fontWeight: 'bold', color: 'var(--danger-color)' }}>${calculateGrandTotalMoney().toFixed(2)}</td>
             </tr>
           </tfoot>
         </table>
       </div>
+
+      {/* MODAL */}
+      {viewingBook && createPortal(
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '2rem' }}>
+          <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
+            <h2 style={{ color: 'var(--primary-color)', marginBottom: '1.5rem' }}>Book Details</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+              <p><strong>Title:</strong> {viewingBook.title}</p>
+              <p><strong>Author:</strong> {viewingBook.author}</p>
+              <p><strong>Price:</strong> ${viewingBook.price.toFixed(2)}</p>
+              <p><strong>Link:</strong> <a href={viewingBook.link} target="_blank" rel="noreferrer" style={{ color: 'var(--primary-color)', wordBreak: 'break-all' }}>{viewingBook.link}</a></p>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setViewingBook(null)}>Close</button>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
