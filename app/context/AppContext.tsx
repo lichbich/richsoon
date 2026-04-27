@@ -37,8 +37,10 @@ interface AppState {
   deleteUser: (userId: string) => void;
   updateTaskCount: (bookId: string, count: number) => Promise<void>;
   addBook: (title: string, author: string, link: string, price: number, assignedUsers: string[]) => void;
+  bulkAddBooks: (books: { title: string; author: string; link: string; price: number; assignedUsers: string[] }[]) => Promise<void>;
   editBook: (bookId: string, title: string, author: string, link: string, price: number) => void;
   deleteBook: (bookId: string) => void;
+  bulkDeleteBooks: (bookIds: string[]) => Promise<void>;
   updateBookAssignments: (bookId: string, assignedUsers: string[]) => Promise<void>;
   updateProfile: (userId: string, data: { username?: string, password?: string, avatarUrl?: string }) => Promise<boolean>;
   viewingGlobalAvatarUrl: string | null;
@@ -220,6 +222,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {}
   };
 
+  const bulkAddBooks = async (books: { title: string; author: string; link: string; price: number; assignedUsers: string[] }[]) => {
+    if (currentUser?.role !== "Admin") return;
+    try {
+      await fetch(`${API_URL}/books/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ books }),
+      });
+      fetchData();
+    } catch (err) {}
+  };
+
   const editBook = async (bookId: string, title: string, author: string, link: string, price: number) => {
     if (currentUser?.role !== "Admin") return;
     try {
@@ -236,6 +250,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (currentUser?.role !== "Admin") return;
     try {
       await fetch(`${API_URL}/books/${bookId}`, { method: "DELETE" });
+      fetchData();
+    } catch (err) {}
+  };
+
+  const bulkDeleteBooks = async (bookIds: string[]) => {
+    if (currentUser?.role !== "Admin") return;
+    try {
+      await fetch(`${API_URL}/books/delete-bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: bookIds }),
+      });
       fetchData();
     } catch (err) {}
   };
@@ -294,8 +320,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         deleteUser,
         updateTaskCount,
         addBook,
+        bulkAddBooks,
         editBook,
         deleteBook,
+        bulkDeleteBooks,
         updateBookAssignments,
         updateProfile,
         viewingGlobalAvatarUrl,
