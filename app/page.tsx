@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import { useAppContext } from "./context/AppContext";
 
 export default function Home() {
-  const { currentUser } = useAppContext();
+  const { currentUser, isLoading } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
+    if (isLoading) return;
     if (currentUser) {
       router.push("/dashboard/tasks");
     } else {
       router.push("/login");
     }
-  }, [currentUser, router]);
+  }, [currentUser, isLoading, router]);
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>

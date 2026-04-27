@@ -24,6 +24,7 @@ type TaskCounts = Record<string, Record<string, number>>;
 
 interface AppState {
   currentUser: User | null;
+  isLoading: boolean;
   users: User[];
   books: Book[];
   taskCounts: TaskCounts;
@@ -32,7 +33,7 @@ interface AppState {
   register: (username: string, password: string) => Promise<boolean>;
   updateUserRole: (userId: string, newRole: Role) => void;
   deleteUser: (userId: string) => void;
-  updateTaskCount: (bookId: string, count: number) => void;
+  updateTaskCount: (bookId: string, count: number) => Promise<void>;
   addBook: (title: string, author: string, link: string, price: number, assignedUsers: string[]) => void;
   editBook: (bookId: string, title: string, author: string, link: string, price: number) => void;
   deleteBook: (bookId: string) => void;
@@ -44,11 +45,29 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://manarich.onrender.co
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
+const SESSION_KEY = 'richsoon_session';
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [users, setUsers] = useState<User[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [taskCounts, setTaskCounts] = useState<TaskCounts>({});
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const user = JSON.parse(saved) as User;
+        setCurrentUser(user);
+      }
+    } catch (err) {
+      localStorage.removeItem(SESSION_KEY);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -107,6 +126,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const data = await res.json();
       if (data.success && data.user) {
         setCurrentUser(data.user);
+        localStorage.setItem(SESSION_KEY, JSON.stringify(data.user));
         return true;
       } else {
         alert(data.error || "Login failed");
@@ -120,6 +140,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     setCurrentUser(null);
+    localStorage.removeItem(SESSION_KEY);
   };
 
   const register = async (username: string, password: string): Promise<boolean> => {
@@ -166,7 +187,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateTaskCount = async (bookId: string, count: number) => {
-    if (!currentUser || currentUser.role !== "User") return;
+    if (!currentUser || currentUser.role === "Guest") return;
     try {
       await fetch(`${API_URL}/taskCounts/${bookId}/${currentUser.id}`, {
         method: "POST",
@@ -224,6 +245,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   return (
     <AppContext.Provider
       value={{
+        isLoading,
         currentUser,
         users,
         books,

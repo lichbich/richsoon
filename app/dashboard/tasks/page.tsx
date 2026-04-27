@@ -1,7 +1,120 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAppContext } from "../../context/AppContext";
+
+// Separate component for editable task count cell to manage local state
+function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; currentCount: number; onSave: (bookId: string, count: number) => void }) {
+  const [localValue, setLocalValue] = useState<string>(currentCount ? String(currentCount) : '');
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Sync local value when external data changes (but only if not currently editing)
+  useEffect(() => {
+    if (!isDirty) {
+      setLocalValue(currentCount ? String(currentCount) : '');
+    }
+  }, [currentCount, isDirty]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    // Only allow digits and empty string
+    if (val === '' || /^\d+$/.test(val)) {
+      setLocalValue(val);
+      setIsDirty(true);
+      setShowSuccess(false);
+    }
+  };
+
+  const handleSave = useCallback(async () => {
+    if (!isDirty) return;
+    const numValue = parseInt(localValue) || 0;
+    setIsSaving(true);
+    try {
+      await onSave(bookId, numValue);
+      setIsDirty(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 1500);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [bookId, localValue, isDirty, onSave]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    }
+  };
+
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      gap: '6px',
+      position: 'relative'
+    }}>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        value={localValue}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="0"
+        style={{ 
+          width: '80px', 
+          padding: '0.5rem 0.6rem', 
+          textAlign: 'center',
+          fontSize: '1rem',
+          fontWeight: 500,
+          borderRadius: '8px',
+          border: isDirty 
+            ? '2px solid var(--primary-color)' 
+            : showSuccess 
+              ? '2px solid var(--success-color)'
+              : '1px solid var(--border-color)',
+          backgroundColor: isDirty ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-color)',
+          transition: 'all 0.2s ease',
+          outline: 'none',
+          boxShadow: isDirty ? '0 0 0 3px rgba(99, 102, 241, 0.15)' : 'none',
+          color: 'var(--text-color)',
+        }}
+      />
+      <button
+        onClick={handleSave}
+        disabled={!isDirty || isSaving}
+        title={isDirty ? "Save (Enter)" : "No changes"}
+        style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '8px',
+          border: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1rem',
+          cursor: isDirty ? 'pointer' : 'default',
+          transition: 'all 0.2s ease',
+          backgroundColor: showSuccess 
+            ? 'var(--success-color)' 
+            : isDirty 
+              ? 'var(--primary-color)' 
+              : 'rgba(100, 116, 139, 0.15)',
+          color: (isDirty || showSuccess) ? 'white' : 'var(--text-muted)',
+          opacity: (!isDirty && !showSuccess) ? 0.5 : 1,
+          transform: isDirty ? 'scale(1)' : 'scale(0.9)',
+          boxShadow: isDirty ? '0 2px 8px rgba(99, 102, 241, 0.3)' : 'none',
+          flexShrink: 0,
+        }}
+      >
+        {isSaving ? '⏳' : showSuccess ? '✓' : '💾'}
+      </button>
+    </div>
+  );
+}
 
 export default function TasksPage() {
   const { currentUser, books, users, taskCounts, updateTaskCount } = useAppContext();
@@ -53,6 +166,10 @@ export default function TasksPage() {
     } catch (err) {
       console.error("Failed to copy", err);
     }
+  };
+
+  const handleSaveCount = async (bookId: string, count: number) => {
+    await updateTaskCount(bookId, count);
   };
 
   const calculateRowTotal = (bookId: string) => {
@@ -154,22 +271,19 @@ export default function TasksPage() {
                   const count = taskCounts[book.id]?.[u.id] || 0;
                   const isCurrentUser = u.id === currentUser.id;
                   const isAssigned = book.assignedUsers?.includes(u.id);
+                  // Admin can edit their own counts even if not explicitly assigned
+                  const canEdit = isCurrentUser && (isAssigned || currentUser.role === "Admin");
                   
                   return (
-                    <td key={u.id} style={{ textAlign: 'center' }}>
-                      {isCurrentUser && isAssigned ? (
-                        <input
-                          type="number"
-                          min="0"
-                          value={count || ''}
-                          onChange={(e) => updateTaskCount(book.id, parseInt(e.target.value) || 0)}
-                          style={{ 
-                            width: '60px', 
-                            padding: '0.25rem', 
-                            textAlign: 'center',
-                            margin: '0 auto'
-                          }}
-                          placeholder="0"
+                    <td key={u.id} style={{ 
+                      textAlign: 'center',
+                      padding: canEdit ? '0.5rem' : '1rem',
+                    }}>
+                      {canEdit ? (
+                        <TaskCountInput
+                          bookId={book.id}
+                          currentCount={count}
+                          onSave={handleSaveCount}
                         />
                       ) : (
                         <span style={{ color: count > 0 ? 'var(--text-color)' : 'var(--text-muted)' }}>

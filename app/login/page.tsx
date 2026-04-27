@@ -8,16 +8,16 @@ import Link from "next/link";
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { login, currentUser } = useAppContext();
+  const { login, currentUser, isLoading } = useAppContext();
   const router = useRouter();
 
   useEffect(() => {
-    if (currentUser) {
+    if (!isLoading && currentUser) {
       router.push("/dashboard/tasks");
     }
-  }, [currentUser, router]);
+  }, [currentUser, isLoading, router]);
 
-  if (currentUser) {
+  if (isLoading || currentUser) {
     return null;
   }
 
