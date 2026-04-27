@@ -149,8 +149,8 @@ export default function TasksPage() {
     );
   }
 
-  // Filter books logic
-  let visibleBooks = books.filter(b => b.assignedUsers && b.assignedUsers.length > 0);
+  // Filter books logic - only show books that have at least one valid assignment
+  let visibleBooks = books.filter(b => b.assignedUsers && b.assignedUsers.some(uid => users.some(u => u.id === uid)));
 
   if (currentUser.role !== "Admin" || viewMode === "personal") {
     visibleBooks = visibleBooks.filter(b => b.assignedUsers?.includes(currentUser.id));

@@ -724,7 +724,7 @@ export default function BooksPage() {
                       borderRadius: '8px'
                     }}
                   >
-                    👤 {book.assignedUsers?.length || 0} Assigned
+                    👤 {book.assignedUsers?.filter((uid: string) => users.some(u => u.id === uid)).length || 0} Assigned
                   </button>
                 </td>
                 <td style={{ textAlign: 'right' }}>
