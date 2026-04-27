@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppContext } from "../context/AppContext";
 import Link from "next/link";
@@ -43,6 +43,18 @@ export default function DashboardLayout({
   const [profileEditMode, setProfileEditMode] = useState<"avatar" | "username" | "password" | null>(null);
   const [editValue, setEditValue] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !currentUser) {
@@ -164,7 +176,7 @@ export default function DashboardLayout({
         </nav>
 
         {/* User Profile Card */}
-        <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+        <div ref={menuRef} style={{ position: 'relative', marginBottom: '0.75rem' }}>
           <div 
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             style={{
@@ -228,6 +240,11 @@ export default function DashboardLayout({
               }}>
                 {currentUser.role}
               </span>
+            </div>
+            
+            {/* Indicator */}
+            <div style={{ color: 'var(--text-muted)', fontSize: '1.2rem', paddingLeft: '0.25rem', opacity: 0.7 }}>
+              ⋮
             </div>
           </div>
           
