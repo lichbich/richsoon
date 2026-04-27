@@ -6,23 +6,21 @@ import { useAppContext } from "../../context/AppContext";
 // Separate component for editable task count cell to manage local state
 function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; currentCount: number; onSave: (bookId: string, count: number) => void }) {
   const [localValue, setLocalValue] = useState<string>(currentCount ? String(currentCount) : '');
-  const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Sync local value when external data changes (but only if not currently editing)
+  // Sync local value when external data changes
   useEffect(() => {
-    if (!isDirty) {
-      setLocalValue(currentCount ? String(currentCount) : '');
-    }
-  }, [currentCount, isDirty]);
+    setLocalValue(currentCount ? String(currentCount) : '');
+  }, [currentCount]);
+
+  const isDirty = (parseInt(localValue) || 0) !== (currentCount || 0);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     // Only allow digits and empty string
     if (val === '' || /^\d+$/.test(val)) {
       setLocalValue(val);
-      setIsDirty(true);
       setShowSuccess(false);
     }
   };
@@ -30,7 +28,6 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
   const handleIncrement = () => {
     const current = parseInt(localValue) || 0;
     setLocalValue(String(current + 1));
-    setIsDirty(true);
     setShowSuccess(false);
   };
 
@@ -38,7 +35,6 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
     const current = parseInt(localValue) || 0;
     if (current > 0) {
       setLocalValue(String(current - 1));
-      setIsDirty(true);
       setShowSuccess(false);
     }
   };
@@ -49,7 +45,6 @@ function TaskCountInput({ bookId, currentCount, onSave }: { bookId: string; curr
     setIsSaving(true);
     try {
       await onSave(bookId, numValue);
-      setIsDirty(false);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 1500);
     } finally {
